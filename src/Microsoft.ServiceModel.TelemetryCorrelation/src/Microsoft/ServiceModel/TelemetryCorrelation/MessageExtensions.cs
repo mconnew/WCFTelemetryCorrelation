@@ -1,4 +1,7 @@
-﻿using System.Diagnostics;
+﻿// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT license.
+
+using System.Diagnostics;
 using System.ServiceModel.Channels;
 
 namespace Microsoft.ServiceModel.TelemetryCorrelation

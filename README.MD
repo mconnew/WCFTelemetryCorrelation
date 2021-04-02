@@ -1,0 +1,3 @@
+# WCF Telemetry Correlation Sample
+
+This is sample code to demonstrate how to integrate with WCF on .NET Framework to generate telemetry data. It was written to be used with an older telemetry schema and doesn't use the current naming or data format for flowing telemetry between endpoints. This has been released as an aid to make it easier to implement a telemetry library for WCF which follows current standards and best practices and isn't intended to be used as a finished solution.

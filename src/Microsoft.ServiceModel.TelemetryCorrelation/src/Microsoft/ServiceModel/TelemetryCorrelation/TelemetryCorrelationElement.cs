@@ -1,4 +1,7 @@
-﻿using System;
+﻿// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT license.
+
+using System;
 using System.Configuration;
 using System.ServiceModel.Channels;
 using System.ServiceModel.Configuration;

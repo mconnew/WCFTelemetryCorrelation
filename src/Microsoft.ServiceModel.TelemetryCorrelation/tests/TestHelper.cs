@@ -1,4 +1,7 @@
-﻿using Microsoft.ServiceModel.TelemetryCorrelation.Tests.Extensibility;
+﻿// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT license.
+
+using Microsoft.ServiceModel.TelemetryCorrelation.Tests.Extensibility;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
