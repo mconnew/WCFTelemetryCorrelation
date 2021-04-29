@@ -1,6 +1,7 @@
 ﻿// Copyright (c) Microsoft Corporation.
 // Licensed under the MIT license.
 
+using Microsoft.ApplicationInsights;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.ServiceModel;
@@ -18,17 +19,25 @@ namespace Microsoft.ServiceModel.TelemetryCorrelation.Tests
 
         public string GetActivityRootId()
         {
+            TelemetryClient tc = new TelemetryClient();
+            tc.TrackTrace("GetActivityRootId start");
+
             var activity = Activity.Current;
             if (activity == null)
             {
                 return null;
             }
 
+            tc.TrackTrace("GetActivityRootId end");
+
             return activity.RootId;
         }
 
         public Dictionary<string, string> GetBaggage()
         {
+            TelemetryClient tc = new TelemetryClient();
+            tc.TrackTrace("GetBaggage start"); 
+
             var activity = Activity.Current;
             if(activity == null)
             {
@@ -40,6 +49,8 @@ namespace Microsoft.ServiceModel.TelemetryCorrelation.Tests
             {
                 ((ICollection<KeyValuePair<string, string>>)dictionary).Add(item);
             }
+
+            tc.TrackTrace("GetBaggage end");
 
             return dictionary;
         }

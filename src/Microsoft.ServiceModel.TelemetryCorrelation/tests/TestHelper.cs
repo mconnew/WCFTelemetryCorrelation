@@ -1,6 +1,8 @@
 ﻿// Copyright (c) Microsoft Corporation.
 // Licensed under the MIT license.
 
+using Microsoft.ApplicationInsights;
+using Microsoft.ApplicationInsights.Extensibility;
 using Microsoft.ServiceModel.TelemetryCorrelation.Tests.Extensibility;
 using System;
 using System.Collections.Generic;
@@ -16,9 +18,22 @@ namespace Microsoft.ServiceModel.TelemetryCorrelation.Tests
 {
     internal class TestHelper
     {
+        public static TelemetryClient InitAiConfigAndGetTelemetyrClient()
+        {
+            var config = TelemetryConfiguration.Active; //This reults in call to WcfTrackingTelemetryModule.Initialize
+            if ((config.InstrumentationKey == null) ||(config.InstrumentationKey == "[AiKey]"))
+                throw new Exception("ApplicationInsights.config not configured correctly");
+            TelemetryClient tc = new TelemetryClient(config);
+            tc.InstrumentationKey = config.InstrumentationKey;
+            return tc;
+        }
+
+
         public static TestHelper BasicHttp { get; } = new TestHelper(TestVariant.BasicHttp);
         public static TestHelper BasicHttpSoap12WSAddressing10 { get; } = new TestHelper(TestVariant.BasicHttpSoap12);
         public static TestHelper NetTcp { get; } = new TestHelper(TestVariant.NetTcp);
+
+        public static TestHelper NetNamedPipes { get; } = new TestHelper(TestVariant.NetNamedPipes);
 
         private TestVariant _variant;
 
@@ -44,6 +59,9 @@ namespace Microsoft.ServiceModel.TelemetryCorrelation.Tests
                         break;
                     case TestVariant.NetTcp:
                         binding = new NetTcpBinding();
+                        break;
+                    case TestVariant.NetNamedPipes:
+                        binding = new NetNamedPipeBinding();
                         break;
                 }
 
@@ -78,9 +96,17 @@ namespace Microsoft.ServiceModel.TelemetryCorrelation.Tests
 
         private string GetBaseAddress(Binding binding)
         {
+            UriBuilder uriBuilder;
             int port = 10000 + (int)_variant;
             string scheme = binding.Scheme;
-            var uriBuilder = new UriBuilder(scheme, "localhost", port);
+            if (scheme != "net.pipe")
+            {
+                uriBuilder = new UriBuilder(scheme, "localhost", port);
+            }
+            else
+            {
+                uriBuilder = new UriBuilder(scheme, "localhost");
+            }
             return uriBuilder.Uri.ToString();
         }
 
@@ -165,7 +191,8 @@ namespace Microsoft.ServiceModel.TelemetryCorrelation.Tests
         {
             BasicHttp,
             BasicHttpSoap12,
-            NetTcp
+            NetTcp,
+            NetNamedPipes
         }
 
         internal static void AddClientMessageInspector(ChannelFactory factory)

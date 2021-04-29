@@ -5,6 +5,8 @@ using System;
 using System.Diagnostics;
 using System.ServiceModel;
 using System.ServiceModel.Dispatcher;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace Microsoft.ServiceModel.TelemetryCorrelation
 {
@@ -17,7 +19,7 @@ namespace Microsoft.ServiceModel.TelemetryCorrelation
             _innerInvoker = invoker;
         }
 
-        private void RestoreIncomingActivity()
+        private void RestoreIncomingActivity() //TODO: Not restoring to what was in ActivityHelper.StartOperation
         {
             OperationContext.Current.IncomingMessageProperties.RestoreCurrentActivity();
         }
@@ -42,13 +44,19 @@ namespace Microsoft.ServiceModel.TelemetryCorrelation
 
         public object Invoke(object instance, object[] inputs, out object[] outputs)
         {
-            RestoreIncomingActivity();
+
+            Debug.WriteLine($"ActivityRestoringOperationInvoker.Invoke enter, Thread: {Thread.CurrentThread.ManagedThreadId}, Task: {Task.CurrentId},Activity - RootId: {Activity.Current?.RootId}, SpanId: {Activity.Current?.SpanId}, ParentSpanId: {Activity.Current?.ParentSpanId} ");
+
+            RestoreIncomingActivity(); 
+            Debug.WriteLine($"ActivityRestoringOperationInvoker.Invoke .. RestoreIncomingActivity, Thread: {Thread.CurrentThread.ManagedThreadId}, Task: {Task.CurrentId},Activity - RootId: {Activity.Current?.RootId}, SpanId: {Activity.Current?.SpanId}, ParentSpanId: {Activity.Current?.ParentSpanId} ");
             try
             {
                 return _innerInvoker.Invoke(instance, inputs, out outputs);
+    
             }
             finally
             {
+                Debug.WriteLine($"ActivityRestoringOperationInvoker.Invoke .. Invoke, Thread: {Thread.CurrentThread.ManagedThreadId}, Task: {Task.CurrentId},Activity - RootId: {Activity.Current?.RootId}, SpanId: {Activity.Current?.SpanId}, ParentSpanId: {Activity.Current?.ParentSpanId} ");
                 SaveOutgoingActivity(overwrite: false);
             }
         }

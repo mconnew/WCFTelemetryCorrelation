@@ -1,6 +1,7 @@
 ﻿// Copyright (c) Microsoft Corporation.
 // Licensed under the MIT license.
 
+using Microsoft.ApplicationInsights.DependencyCollector;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.ServiceModel;
@@ -14,6 +15,8 @@ namespace Microsoft.ServiceModel.TelemetryCorrelation.Tests
         [Fact]
         public void BasicHttpDispatchMessageInspector()
         {
+            var tc = TestHelper.InitAiConfigAndGetTelemetyrClient();
+
             IList<KeyValuePair<string, object>> events;
             using (var subscription = DiagnosticsHelper.SubscribeToListener())
             {
@@ -51,6 +54,8 @@ namespace Microsoft.ServiceModel.TelemetryCorrelation.Tests
         [Fact]
         public void BasicHttpDispatchFormatter()
         {
+            var tc = TestHelper.InitAiConfigAndGetTelemetyrClient();
+
             IList<KeyValuePair<string, object>> events;
             using (var subscription = DiagnosticsHelper.SubscribeToListener())
             {
@@ -88,6 +93,8 @@ namespace Microsoft.ServiceModel.TelemetryCorrelation.Tests
         [Fact]
         public void BasicHttpDispatchOperationSelector()
         {
+            var tc = TestHelper.InitAiConfigAndGetTelemetyrClient();
+
             IList<KeyValuePair<string, object>> events;
             using (var subscription = DiagnosticsHelper.SubscribeToListener())
             {
@@ -123,6 +130,8 @@ namespace Microsoft.ServiceModel.TelemetryCorrelation.Tests
         [Fact]
         public void BasicHttpDispatchParameterInspector()
         {
+            var tc = TestHelper.InitAiConfigAndGetTelemetyrClient();
+
             IList<KeyValuePair<string, object>> events;
             using (var subscription = DiagnosticsHelper.SubscribeToListener())
             {
@@ -160,6 +169,8 @@ namespace Microsoft.ServiceModel.TelemetryCorrelation.Tests
         [Fact]
         public void BasicHttpInstanceProvider()
         {
+            var tc = TestHelper.InitAiConfigAndGetTelemetyrClient();
+
             IList<KeyValuePair<string, object>> events;
             using (var subscription = DiagnosticsHelper.SubscribeToListener())
             {
@@ -197,6 +208,8 @@ namespace Microsoft.ServiceModel.TelemetryCorrelation.Tests
         [Fact]
         public void BasicHttpClientMessageInspector()
         {
+            var tc = TestHelper.InitAiConfigAndGetTelemetyrClient();
+
             IList<KeyValuePair<string, object>> events;
             using (var subscription = DiagnosticsHelper.SubscribeToListener())
             {

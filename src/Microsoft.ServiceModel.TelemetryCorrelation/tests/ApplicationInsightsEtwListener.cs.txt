@@ -1,45 +1,38 @@
-﻿// Copyright (c) Microsoft Corporation.
-// Licensed under the MIT license.
-
-using Microsoft.ApplicationInsights.DependencyCollector;
-using System;
-using System.Diagnostics;
+﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics.Tracing;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
 
-namespace Microsoft.ServiceModel.TelemetryCorrelation
+namespace Microsoft.ServiceModel.TelemetryCorrelation.Tests
 {
-    internal class DiagnosticSourceBridgeEventListener : EventListener
+    internal class ApplicationInsightsEventListener : EventListener
     {
         private const string EventSourceName = "Microsoft-Windows-Application ServiceModel-DiagnosticSource-Bridge";
         private static bool s_initialized = false;
         private static bool s_dsBridgeAvailable = false;
         private static object s_classLock = new object();
-        private static DiagnosticSourceBridgeEventListener s_instance;
+        private static ApplicationInsightsEventListener s_instance;
 
         protected override void OnEventSourceCreated(EventSource eventSource)
         {
             if (eventSource.Name.Equals(EventSourceName))
             {
-                ActivityHelper.EnsureInitialized();
+                //ActivityHelper.EnsureInitialized();
                 EnableEvents(eventSource, EventLevel.Verbose, EventKeywords.All);
             }
         }
 
         protected override void OnEventWritten(EventWrittenEventArgs eventData)
         {
-            //if (!ActivityHelper.DiagnosticListener.IsEnabled())
-            //{
-            //    return;
-            //}
-
-            //TODO: Revier if should replace above with this?
-            if (!WcfTrackingTelemetryModule.IsEnabled)
+            if (!ActivityHelper.DiagnosticListener.IsEnabled())
             {
                 return;
             }
 
             Activity activity;
-            if(!ActivityHelper.TryGetRootActivityFromOperationContext(out activity) || activity == null)
+            if (!ActivityHelper.TryGetRootActivityFromOperationContext(out activity) || activity == null)
             {
                 activity = Activity.Current;
                 if (activity == null)
@@ -47,16 +40,15 @@ namespace Microsoft.ServiceModel.TelemetryCorrelation
                     return;
                 }
             }
-            
-            //TODO: Review if should comment out.
-            //if (!ActivityHelper.DiagnosticListener.IsEnabled(eventData.EventName))
-            //{
-            //    return;
-            //}
+
+            if (!ActivityHelper.DiagnosticListener.IsEnabled(eventData.EventName))
+            {
+                return;
+            }
 
             ActivityHelper.SetCurrentActivity(activity);
 
-            switch(eventData.EventName)
+            switch (eventData.EventName)
             {
                 case "DispatchMessageInspectorAfterReceive":
                 case "DispatchMessageInspectorBeforeSend":
@@ -133,7 +125,7 @@ namespace Microsoft.ServiceModel.TelemetryCorrelation
             if (pos > -1)
             {
                 var val = eventData.Payload[pos];
-                if(val is long)
+                if (val is long)
                 {
                     return (long)val;
                 }

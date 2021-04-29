@@ -2,8 +2,11 @@
 // Licensed under the MIT license.
 
 using System;
+using System.Diagnostics;
 using System.ServiceModel;
 using System.ServiceModel.Channels;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace Microsoft.ServiceModel.TelemetryCorrelation
 {
@@ -65,7 +68,7 @@ namespace Microsoft.ServiceModel.TelemetryCorrelation
             var message = _innerRequestChannel.EndRequest(result);
             if (_isServer)
             {
-                System.Diagnostics.Debugger.Break();
+                Debugger.Break();
             }
 
             return message;
@@ -86,7 +89,7 @@ namespace Microsoft.ServiceModel.TelemetryCorrelation
 
             if (_isServer)
             {
-                System.Diagnostics.Debugger.Break();
+                Debugger.Break();
             }
             else
             {
@@ -98,26 +101,34 @@ namespace Microsoft.ServiceModel.TelemetryCorrelation
 
         public Message Request(Message message, TimeSpan timeout)
         {
+            Debug.WriteLine($"TelemetryCorrelationRequestChannel.Request enter, Activity - Thread: {Thread.CurrentThread.ManagedThreadId}, Task: {Task.CurrentId}, isServer:{_isServer}, RootId: {Activity.Current?.RootId}, SpanId: {Activity.Current?.SpanId}, ParentSpanId: {Activity.Current?.ParentSpanId} ");
+
             if (_isServer)
             {
-                ActivityHelper.StartReceiveMessage(message);
+                ActivityHelper.StartReceiveMessage(message); 
+                Debug.WriteLine($"TelemetryCorrelationRequestChannel.Request isServer(true), after ActivityHelper.StartReceiveMessage, Activity - Thread: {Thread.CurrentThread.ManagedThreadId}, Task: {Task.CurrentId}, isServer:{_isServer}, RootId: {Activity.Current?.RootId}, SpanId: {Activity.Current?.SpanId}, ParentSpanId: {Activity.Current?.ParentSpanId} ");
+
             }
             else
             {
                 message = ActivityHelper.StartSendMessage(message);
+                Debug.WriteLine($"TelemetryCorrelationRequestChannel.Request isServer(fase), after ActivityHelper.StartSendMessage, Activity - Thread: {Thread.CurrentThread.ManagedThreadId}, Task: {Task.CurrentId}, isServer:{_isServer}, RootId: {Activity.Current?.RootId}, SpanId: {Activity.Current?.SpanId}, ParentSpanId: {Activity.Current?.ParentSpanId} ");
+
             }
 
             var response = _innerRequestChannel.Request(message, timeout);
+            Debug.WriteLine($"TelemetryCorrelationRequestChannel.Request after innerRequestChannel.Request, Activity -Thread: {Thread.CurrentThread.ManagedThreadId}, Task: {Task.CurrentId}, isServer:{_isServer},  RootId: {Activity.Current?.RootId}, SpanId: {Activity.Current?.SpanId}, ParentSpanId: {Activity.Current?.ParentSpanId} ");
+
 
             if (_isServer)
             {
-                System.Diagnostics.Debugger.Break();
-                //message.RestoreCurrentActivity();
-                //ActivityHelper.StopReceiveMessage(message);
+                Debugger.Break();
             }
             else
             {
                 ActivityHelper.StopSendMessage(message, response);
+                Debug.WriteLine($"TelemetryCorrelationRequestChannel.Request isServer(fase), after ActivityHelper.StopSendMessage, Activity - RootId: {Activity.Current?.RootId}, SpanId: {Activity.Current?.SpanId}, ParentSpanId: {Activity.Current?.ParentSpanId} ");
+
             }
 
             return response;
