@@ -4,8 +4,10 @@
 using Microsoft.ApplicationInsights;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Runtime.CompilerServices;
 using System.ServiceModel;
 using System.Threading;
+using System.Threading.Tasks;
 
 namespace Microsoft.ServiceModel.TelemetryCorrelation.Tests
 {
@@ -33,6 +35,49 @@ namespace Microsoft.ServiceModel.TelemetryCorrelation.Tests
             return activity.RootId;
         }
 
+        public string GetActivityRootId2Hop([CallerMemberName] string instancePath = "")
+        {
+            TelemetryClient tc = new TelemetryClient();
+            tc.TrackTrace("GetActivityRootId2Hop start");
+
+            ServiceHost host = null;
+            ChannelFactory<ITestService> factory = null;
+            ITestService channel = null;
+
+            try { 
+                var helper = TestHelper.NetNamedPipes;
+                factory = helper.CreateChannelFactory(instancePath);
+                channel = factory.CreateChannel();
+                tc.TrackTrace("before GetActivityRootId2Async");
+                var id = channel.GetActivityRootId2Async().Result;
+                tc.TrackTrace("after  GetActivityRootId2Async");
+
+                return id;
+            }
+            finally
+            {
+                tc.TrackTrace("GetActivityRootId2Hop end");
+                tc.Flush();
+                TestHelper.Cleanup(channel, factory, host);
+            }
+        }
+
+        public Task<string> GetActivityRootId2Async()
+        {
+            TelemetryClient tc = new TelemetryClient();
+            tc.TrackTrace("GetActivityRootId start");
+
+            var activity = Activity.Current;
+            if (activity == null)
+            {
+                return null;
+            }
+
+            tc.TrackTrace("GetActivityRootId end");
+
+            return Task.FromResult(activity.RootId);
+        }
+
         public Dictionary<string, string> GetBaggage()
         {
             TelemetryClient tc = new TelemetryClient();
@@ -51,7 +96,6 @@ namespace Microsoft.ServiceModel.TelemetryCorrelation.Tests
             }
 
             tc.TrackTrace("GetBaggage end");
-
             return dictionary;
         }
 
