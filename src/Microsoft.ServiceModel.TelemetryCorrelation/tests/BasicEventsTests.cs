@@ -474,6 +474,69 @@ namespace Microsoft.ServiceModel.TelemetryCorrelation.Tests
         }
 
         [Fact]
+        public void NetNamedPipesClientActivityPropagation2Hops()
+        {
+            var tc = TestHelper.InitAiConfigAndGetTelemetyrClient();
+
+            var activity = new Activity("Root");
+            activity.AddBaggage("foo", "bar");
+            var id = activity.Id;
+            activity.Start();
+
+            tc.TrackTrace("NetNamedPipesClientActivityPropagation2Hops begin");
+
+            using (var subscription = DiagnosticsHelper.SubscribeToListener())
+            {
+                ServiceHost host = null;
+                ChannelFactory<ITestService> factory = null;
+                ITestService channel = null;
+
+                ServiceHost host2= null;
+                ChannelFactory<ITestService> factory2= null;
+                ITestService channel2= null;
+
+                try
+                {
+                    var helper2 = TestHelper.NetNamedPipes;
+                    host2 = helper2.CreateServiceHost();
+                    host2.Open();
+
+                    var helper = TestHelper.BasicHttp;
+                    //var activity = new Activity("Root");
+                    //activity.AddBaggage("foo", "bar");
+                    //var id = activity.Id;
+                    //activity.Start();
+                    host = helper.CreateServiceHost();
+                    host.Open();
+
+                    factory = helper.CreateChannelFactory();
+                    channel = factory.CreateChannel(); //Endpoint = Address={net.pipe://localhost/NetNamedPipesClientActivityPropagation2Hops/NetNamedPipes}
+                    var baggage = channel.GetBaggage();
+
+                    Assert.NotNull(baggage);
+                    Assert.Single(baggage);
+                    Assert.True(baggage.ContainsKey("foo"));
+                    Assert.Equal("bar", baggage["foo"]);
+                    
+
+                    var receivedRootId = channel.GetActivityRootId();
+                    var receivedRootId2 = channel.GetActivityRootId2Hop();
+
+                    Assert.Equal(activity.RootId, receivedRootId);
+                    Assert.Equal(activity.RootId, receivedRootId2);
+
+                }
+                finally
+                {
+                    //activity.Stop();
+                    tc.TrackTrace("NetNamedPipesClientActivityPropagation2Hops end");
+                    tc.Flush();
+                    TestHelper.Cleanup(channel, factory, host);
+                    TestHelper.Cleanup(channel2, factory2, host2);
+                }
+            }
+        }
+
         public void NetNamedPipesClientActivityPropagation()
         {
             var tc = TestHelper.InitAiConfigAndGetTelemetyrClient();
@@ -521,7 +584,6 @@ namespace Microsoft.ServiceModel.TelemetryCorrelation.Tests
                 }
             }
         }
-
         [Fact]
         public void NetNamedMultipleConcurrentRequestsEventsWritten()
         {

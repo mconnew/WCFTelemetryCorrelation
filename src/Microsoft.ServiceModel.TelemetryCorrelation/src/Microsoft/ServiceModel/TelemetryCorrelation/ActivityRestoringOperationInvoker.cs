@@ -47,7 +47,8 @@ namespace Microsoft.ServiceModel.TelemetryCorrelation
 
             Debug.WriteLine($"ActivityRestoringOperationInvoker.Invoke enter, Thread: {Thread.CurrentThread.ManagedThreadId}, Task: {Task.CurrentId},Activity - RootId: {Activity.Current?.RootId}, SpanId: {Activity.Current?.SpanId}, ParentSpanId: {Activity.Current?.ParentSpanId} ");
 
-            RestoreIncomingActivity(); 
+            RestoreIncomingActivity();
+
             Debug.WriteLine($"ActivityRestoringOperationInvoker.Invoke .. RestoreIncomingActivity, Thread: {Thread.CurrentThread.ManagedThreadId}, Task: {Task.CurrentId},Activity - RootId: {Activity.Current?.RootId}, SpanId: {Activity.Current?.SpanId}, ParentSpanId: {Activity.Current?.ParentSpanId} ");
             try
             {
