@@ -68,6 +68,7 @@ namespace Microsoft.ServiceModel.TelemetryCorrelation.Tests
                     tc.TrackTrace("BasicHttpClientActivityPropagation end");
                     //tc.StopOperation<RequestTelemetry>(opHolder);
                     tc.Flush();
+                    //Application Insights Telemetry: {"name":"AppDependencies","time":"2021-04-18T22:51:26.2862128Z","iKey":"a3f20105-2476-43dd-8b07-d0da7a4c9ca4","tags":{"ai.cloud.roleInstance":"DESKTOP-3Q08DV2","ai.operation.id":"eb99e55b8714284bb62fe4970177395e","ai.operation.parentId":"2b36e98ca4dff24c","ai.internal.sdkVersion":"rdddsd:2.17.0-146","ai.internal.nodeName":"DESKTOP-3Q08DV2"},"data":{"baseType":"RemoteDependencyData","baseData":{"ver":2,"name":"POST /BasicHttpClientActivityPropagation/BasicHttp","id":"13be8e673a657840","data":"http://localhost:10000/BasicHttpClientActivityPropagation/BasicHttp","duration":"00:00:00.2879238","resultCode":"200","success":true,"type":"Http","target":"localhost:10000","properties":{"foo":"bar","DeveloperMode":"true","_MS.ProcessedByMetricExtractors":"(Name:'Dependencies', Ver:'1.1')"}}}}
                     TestHelper.Cleanup(channel, factory, host);
                 }
             }
