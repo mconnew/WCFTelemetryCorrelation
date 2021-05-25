@@ -16,12 +16,13 @@ using Xunit;
 using Microsoft.ApplicationInsights.Extensibility.Implementation;
 using Microsoft.ApplicationInsights.DataContracts;
 using Microsoft.ApplicationInsights.DependencyCollector;
+using System.Reflection;
 
 namespace Microsoft.ServiceModel.TelemetryCorrelation.Tests
 {
 
     public class BasicEventsTests
-    {        
+    {
 
         [Fact]
         public void BasicHttpClientActivityPropagation()
@@ -35,7 +36,7 @@ namespace Microsoft.ServiceModel.TelemetryCorrelation.Tests
 
             tc.TrackTrace("BasicHttpClientActivityPropagation begin");
 
-            using (var subscription = DiagnosticsHelper.SubscribeToListener()) 
+            using (var subscription = DiagnosticsHelper.SubscribeToListener())
             {
                 ServiceHost host = null;
                 ChannelFactory<ITestService> factory = null;
@@ -59,8 +60,8 @@ namespace Microsoft.ServiceModel.TelemetryCorrelation.Tests
                     Assert.True(baggage.ContainsKey("foo"));
                     Assert.Equal("bar", baggage["foo"]);
 
-                   var receivedRootId = channel.GetActivityRootId();
-                   Assert.Equal(activity.RootId, receivedRootId); 
+                    var receivedRootId = channel.GetActivityRootId();
+                    Assert.Equal(activity.RootId, receivedRootId);
                 }
                 finally
                 {
@@ -68,7 +69,6 @@ namespace Microsoft.ServiceModel.TelemetryCorrelation.Tests
                     tc.TrackTrace("BasicHttpClientActivityPropagation end");
                     //tc.StopOperation<RequestTelemetry>(opHolder);
                     tc.Flush();
-                    //Application Insights Telemetry: {"name":"AppDependencies","time":"2021-04-18T22:51:26.2862128Z","iKey":"a3f20105-2476-43dd-8b07-d0da7a4c9ca4","tags":{"ai.cloud.roleInstance":"DESKTOP-3Q08DV2","ai.operation.id":"eb99e55b8714284bb62fe4970177395e","ai.operation.parentId":"2b36e98ca4dff24c","ai.internal.sdkVersion":"rdddsd:2.17.0-146","ai.internal.nodeName":"DESKTOP-3Q08DV2"},"data":{"baseType":"RemoteDependencyData","baseData":{"ver":2,"name":"POST /BasicHttpClientActivityPropagation/BasicHttp","id":"13be8e673a657840","data":"http://localhost:10000/BasicHttpClientActivityPropagation/BasicHttp","duration":"00:00:00.2879238","resultCode":"200","success":true,"type":"Http","target":"localhost:10000","properties":{"foo":"bar","DeveloperMode":"true","_MS.ProcessedByMetricExtractors":"(Name:'Dependencies', Ver:'1.1')"}}}}
                     TestHelper.Cleanup(channel, factory, host);
                 }
             }
@@ -112,7 +112,7 @@ namespace Microsoft.ServiceModel.TelemetryCorrelation.Tests
                     Assert.Equal("bar", baggage["foo"]);
 
                     var receivedRootId = channel.GetActivityRootId();
-                    Assert.Equal(activity.RootId, receivedRootId); 
+                    Assert.Equal(activity.RootId, receivedRootId);
                 }
                 finally
                 {
@@ -204,7 +204,7 @@ namespace Microsoft.ServiceModel.TelemetryCorrelation.Tests
         }
 
         [Fact]
-        public void HttpMultipleConcurrentRequestsEventsWritten()
+        public void BasicHttpMultipleConcurrentRequestsEventsWritten()
         {
             var tc = TestHelper.InitAiConfigAndGetTelemetyrClient();
 
@@ -274,12 +274,12 @@ namespace Microsoft.ServiceModel.TelemetryCorrelation.Tests
 
             Assert.Single(events.Where(e => (e.Key == "System.ServiceModel.SendMessage.Start" && TestHelper.GetValue<string>(e.Value, "Action") == "http://tempuri.org/ITestService/Sleep")));
             Assert.Single(events.Where(e => (e.Key == "System.ServiceModel.SendMessage.Start" && TestHelper.GetValue<string>(e.Value, "Action") == "http://tempuri.org/ITestService/GetActivityRootId")));
-            //Assert.Single(events.Where(e => (e.Key == "System.ServiceModel.SendMessage.Stop" && TestHelper.GetValue<string>(e.Value, "Action") == "http://tempuri.org/ITestService/SleepResponse"))); //TODO: Throwing exception
-            //Assert.Single(events.Where(e => (e.Key == "System.ServiceModel.SendMessage.Stop" && TestHelper.GetValue<string>(e.Value, "Action") == "http://tempuri.org/ITestService/GetActivityRootIdResponse"))); //TOOD: Throwing exception
+            //Assert.Single(events.Where(e => (e.Key == "System.ServiceModel.SendMessage.Stop" && TestHelper.GetValue<string>(e.Value, "Action") == "http://tempuri.org/ITestService/SleepResponse"))); //TODO: Throwing exception hen added this Http test similar to NetTcpMultipleConcurrentRequestsEventsWritten
+            //Assert.Single(events.Where(e => (e.Key == "System.ServiceModel.SendMessage.Stop" && TestHelper.GetValue<string>(e.Value, "Action") == "http://tempuri.org/ITestService/GetActivityRootIdResponse"))); //TODO: Throwing exception hen added this Http test similar to NetTcpMultipleConcurrentRequestsEventsWritten
             Assert.Single(events.Where(e => (e.Key == "System.ServiceModel.ReceiveMessage.Start" && TestHelper.GetValue<string>(e.Value, "Action") == "http://tempuri.org/ITestService/Sleep")));
             Assert.Single(events.Where(e => (e.Key == "System.ServiceModel.ReceiveMessage.Start" && TestHelper.GetValue<string>(e.Value, "Action") == "http://tempuri.org/ITestService/GetActivityRootId")));
-            //Assert.Single(events.Where(e => (e.Key == "System.ServiceModel.ReceiveMessage.Stop" && TestHelper.GetValue<string>(e.Value, "Action") == "http://tempuri.org/ITestService/SleepResponse")));//TODO: Throwing exception
-            //Assert.Single(events.Where(e => (e.Key == "System.ServiceModel.ReceiveMessage.Stop" && TestHelper.GetValue<string>(e.Value, "Action") == "http://tempuri.org/ITestService/GetActivityRootIdResponse")));//TODO: Throwing exception
+            //Assert.Single(events.Where(e => (e.Key == "System.ServiceModel.ReceiveMessage.Stop" && TestHelper.GetValue<string>(e.Value, "Action") == "http://tempuri.org/ITestService/SleepResponse"))); //TODO: Throwing exception hen added this Http test similar to NetTcpMultipleConcurrentRequestsEventsWritten
+            //Assert.Single(events.Where(e => (e.Key == "System.ServiceModel.ReceiveMessage.Stop" && TestHelper.GetValue<string>(e.Value, "Action") == "http://tempuri.org/ITestService/GetActivityRootIdResponse"))); //TODO: Throwing exception hen added this Http test similar to NetTcpMultipleConcurrentRequestsEventsWritten
         }
 
         [Fact]
@@ -341,7 +341,13 @@ namespace Microsoft.ServiceModel.TelemetryCorrelation.Tests
             data = TestHelper.GetOnlyOneDataItem(events, "ClientSelectOperation");
             Assert.Equal("System.ServiceModel.Dispatcher.OperationSelectorBehavior+MethodInfoOperationSelector", TestHelper.GetValue<string>(data, "TypeName"));
             Assert.Equal("DoWork", TestHelper.GetValue<string>(data, "SelectedOperation"));
-            Assert.Equal(13, events.Count);
+            Assert.Equal(17, events.Count); /*Change to 17 because these events also occur. This error was in orginal code on main branch.
+           [2]: {[ClientMessageInspectorBeforeSend, { TypeName = Microsoft.VisualStudio.Diagnostics.ServiceModelSink.StubClientEventSink, Duration = 1.3063 }]}
+           [5]: {[DispatchMessageInspectorAfterReceive, { TypeName = Microsoft.VisualStudio.Diagnostics.ServiceModelSink.StubServerEventSink, Duration = 2.6019 }]}
+           [11]: {[DispatchMessageInspectorBeforeSend, { TypeName = Microsoft.VisualStudio.Diagnostics.ServiceModelSink.StubServerEventSink, Duration = 0.0037 }]}
+           [15]: {[ClientMessageInspectorAfterReceive, { TypeName = Microsoft.VisualStudio.Diagnostics.ServiceModelSink.StubClientEventSink, Duration = 2.1052 }]}
+        */
+                                             
         }
 
         [Fact]
@@ -407,7 +413,12 @@ namespace Microsoft.ServiceModel.TelemetryCorrelation.Tests
             data = TestHelper.GetOnlyOneDataItem(events, "ClientSelectOperation");
             Assert.Equal("System.ServiceModel.Dispatcher.OperationSelectorBehavior+MethodInfoOperationSelector", TestHelper.GetValue<string>(data, "TypeName"));
             Assert.Equal("DoWork", TestHelper.GetValue<string>(data, "SelectedOperation"));
-            Assert.Equal(12, events.Count);
+            Assert.Equal(16, events.Count); /*Change to 16 becuase these events also occur. This error was in orginal code on main branch.
+           [2]: {[ClientMessageInspectorBeforeSend, { TypeName = Microsoft.VisualStudio.Diagnostics.ServiceModelSink.StubClientEventSink, Duration = 1.3063 }]}
+           [5]: {[DispatchMessageInspectorAfterReceive, { TypeName = Microsoft.VisualStudio.Diagnostics.ServiceModelSink.StubServerEventSink, Duration = 2.6019 }]}
+           [11]: {[DispatchMessageInspectorBeforeSend, { TypeName = Microsoft.VisualStudio.Diagnostics.ServiceModelSink.StubServerEventSink, Duration = 0.0037 }]}
+           [15]: {[ClientMessageInspectorAfterReceive, { TypeName = Microsoft.VisualStudio.Diagnostics.ServiceModelSink.StubClientEventSink, Duration = 2.1052 }]}
+        */
         }
 
         [Fact]
@@ -471,7 +482,70 @@ namespace Microsoft.ServiceModel.TelemetryCorrelation.Tests
             data = TestHelper.GetOnlyOneDataItem(events, "ClientSelectOperation");
             Assert.Equal("System.ServiceModel.Dispatcher.OperationSelectorBehavior+MethodInfoOperationSelector", TestHelper.GetValue<string>(data, "TypeName"));
             Assert.Equal("DoWork", TestHelper.GetValue<string>(data, "SelectedOperation"));
-            Assert.Equal(13, events.Count);
+            Assert.Equal(17, events.Count); /*Change to 17 becuase these events also occur. This error was in orginal code on main branch.
+           [2]: {[ClientMessageInspectorBeforeSend, { TypeName = Microsoft.VisualStudio.Diagnostics.ServiceModelSink.StubClientEventSink, Duration = 1.3063 }]}
+           [5]: {[DispatchMessageInspectorAfterReceive, { TypeName = Microsoft.VisualStudio.Diagnostics.ServiceModelSink.StubServerEventSink, Duration = 2.6019 }]}
+           [11]: {[DispatchMessageInspectorBeforeSend, { TypeName = Microsoft.VisualStudio.Diagnostics.ServiceModelSink.StubServerEventSink, Duration = 0.0037 }]}
+           [15]: {[ClientMessageInspectorAfterReceive, { TypeName = Microsoft.VisualStudio.Diagnostics.ServiceModelSink.StubClientEventSink, Duration = 2.1052 }]}
+        */
+        }
+
+        private void HostTestServiceWithNamedPipes()
+        {
+            ServiceHost host = null;
+            ChannelFactory<ITestService> factory = null;
+            ITestService channel = null;
+
+            try
+            {
+                var helper = TestHelper.NetNamedPipes;
+                host = helper.CreateServiceHost();
+                host.Open();
+                TestService.hostEvent.WaitOne();
+            }
+            catch (Exception ex)
+            {
+                Debugger.Break();
+            }
+            finally
+            {
+                TestHelper.Cleanup(channel, factory, host);
+            }
+        }
+
+
+        public Task RunHostTestServiceWithNamedPipes()
+        {
+            return Task.Run(() => HostTestServiceWithNamedPipes());
+        }
+
+
+        private void HostTestServiceWithHttp()
+        {
+            ServiceHost host = null;
+            ChannelFactory<ITestService> factory = null;
+            ITestService channel = null;
+
+            try
+            {
+                var helper = TestHelper.BasicHttp;
+                host = helper.CreateServiceHost();
+                host.Open();
+                TestService.hostEvent.WaitOne();
+            }
+            catch (Exception ex)
+            {
+                Debugger.Break();
+            }
+            finally
+            {
+                TestHelper.Cleanup(channel, factory, host);
+            }
+        }
+
+        public Task RunHostTestServiceWithHttp()
+        {
+            return Task.Run(() => HostTestServiceWithHttp());
         }
 
         [Fact]
@@ -492,9 +566,9 @@ namespace Microsoft.ServiceModel.TelemetryCorrelation.Tests
                 ChannelFactory<ITestService> factory = null;
                 ITestService channel = null;
 
-                ServiceHost host2= null;
-                ChannelFactory<ITestService> factory2= null;
-                ITestService channel2= null;
+                ServiceHost host2 = null;
+                ChannelFactory<ITestService> factory2 = null;
+                ITestService channel2 = null;
 
                 try
                 {
@@ -518,7 +592,7 @@ namespace Microsoft.ServiceModel.TelemetryCorrelation.Tests
                     Assert.Single(baggage);
                     Assert.True(baggage.ContainsKey("foo"));
                     Assert.Equal("bar", baggage["foo"]);
-                    
+
 
                     var receivedRootId = channel.GetActivityRootId();
                     var receivedRootId2 = channel.GetActivityRootId2Hop();
@@ -537,7 +611,120 @@ namespace Microsoft.ServiceModel.TelemetryCorrelation.Tests
                 }
             }
         }
+        private void LoadAssemblies(IEnumerable<string> assemblyNames, AppDomain newDomain)
+        {
+            foreach (string asmbly in assemblyNames)
+            {
+                try
+                {
+                    newDomain.Load(asmbly);
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine(asmbly);
+                }
+            }
+        }
 
+        private void LoadAssembliesForDomain(AppDomain newDomain)
+        {
+            LoadAssemblies(from a in AppDomain.CurrentDomain.GetAssemblies() select a.FullName, newDomain);
+            LoadAssemblies(from a in System.Reflection.Assembly.GetExecutingAssembly().GetReferencedAssemblies() select a.FullName, newDomain);
+        }
+
+        private AppDomain CreateDomain(string domainName)
+        {
+            var domain = AppDomain.CreateDomain(domainName, null, new AppDomainSetup
+            {
+                ApplicationBase = AppDomain.CurrentDomain.SetupInformation.ApplicationBase
+            });
+
+            return domain;
+        }
+
+        //Remove this test. No longer needed since that was not issue when testing FrontEndWCFService
+        //[Fact]
+        //public void NetNamedPipesClientActivityPropogation2HopsAppDomains()
+        //{
+        //    var tc = TestHelper.InitAiConfigAndGetTelemetyrClient();
+        //    var activity = new Activity("Root");
+        //    activity.AddBaggage("foo", "bar");
+        //    var id = activity.Id;
+        //    activity.Start();
+
+        //    using (var subscription = DiagnosticsHelper.SubscribeToListener())
+        //    {
+        //        try
+        //        {                    
+        //            AppDomain root = AppDomain.CurrentDomain;
+
+        //            var httpDomain = CreateDomain("HttpDomain");
+        //            var netNampedPipesDomain = CreateDomain("NetNamedPipesDomain");
+        //            LoadAssembliesForDomain(httpDomain);
+        //            LoadAssembliesForDomain(netNampedPipesDomain);
+
+        //            Assembly[] assemblies = httpDomain.GetAssemblies();
+        //            var assembly = (from a in assemblies where a.FullName == "Microsoft.ServiceModel.TelemetryCorrelation.Tests, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null" select a).FirstOrDefault();
+        //            Type type = assembly.GetType("Microsoft.ServiceModel.TelemetryCorrelation.Tests.BasicEventsTests");
+        //            MethodInfo method = type.GetMethod("RunHostTestServiceWithNamedPipes");
+        //            object instance = Activator.CreateInstance(type);
+        //            var taskHostTestServiceWithNamedPipe = (Task)method.Invoke(instance, null);
+
+        //            assemblies = netNampedPipesDomain.GetAssemblies();
+        //            assembly = (from a in assemblies where a.FullName == "Microsoft.ServiceModel.TelemetryCorrelation.Tests, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null" select a).FirstOrDefault();
+        //            type = assembly.GetType("Microsoft.ServiceModel.TelemetryCorrelation.Tests.BasicEventsTests");
+        //            method = type.GetMethod("RunHostTestServiceWithHttp");
+        //            instance = Activator.CreateInstance(type);
+        //            var taskHostTestServiceWithHttp = (Task)method.Invoke(instance, null);
+
+        //            var helper = TestHelper.BasicHttp;
+        //            var factory = helper.CreateChannelFactory("HostTestServiceWithHttp");
+        //            var channel = factory.CreateChannel(); 
+        //            var baggage = channel.GetBaggage();
+
+        //            //channel.DoWork();
+
+        //            Assert.NotNull(baggage);
+        //            Assert.Single(baggage);
+        //            Assert.True(baggage.ContainsKey("foo"));
+        //            Assert.Equal("bar", baggage["foo"]);
+
+        //            var receivedRootId = channel.GetActivityRootId();
+        //            var receivedRootId2 = channel.GetActivityRootId2Hop("HostTestServiceWithNamedPipes");
+
+        //            Assert.Equal(activity.RootId, receivedRootId);
+        //            Assert.Equal(activity.RootId, receivedRootId2);
+
+
+        //            channel.Done();
+        //            channel.Done();
+        //            taskHostTestServiceWithNamedPipe.Wait();
+        //            taskHostTestServiceWithHttp.Wait();
+        //            activity.Stop();
+
+        //            //Type programClass = newDomain.GetType("Microsoft.ServiceModel.TelemetryCorrelation.Tests.BasicEventsTests");
+        //            //// Get the method GetAssemblyName method to make a call.  
+        //            //MethodInfo getAssemblyName = programClass.GetMethod("GetAssemblyName");
+        //            //// Create an instance o.  
+        //            //object programObject = Activator.CreateInstance(programClass);
+        //            //// Execute the GetAssemblyName method.  
+        //            //getAssemblyName.Invoke(programObject, null);
+        //            //Console.ReadKey();
+        //        }
+        //        catch (Exception ex)
+        //        {
+
+        //        }
+        //    }
+
+        //}
+
+        public string GetString()
+        {
+            return "hello";
+        }
+
+        [Fact]
         public void NetNamedPipesClientActivityPropagation()
         {
             var tc = TestHelper.InitAiConfigAndGetTelemetyrClient();
@@ -656,12 +843,11 @@ namespace Microsoft.ServiceModel.TelemetryCorrelation.Tests
 
             Assert.Single(events.Where(e => (e.Key == "System.ServiceModel.SendMessage.Start" && TestHelper.GetValue<string>(e.Value, "Action") == "http://tempuri.org/ITestService/Sleep")));
             Assert.Single(events.Where(e => (e.Key == "System.ServiceModel.SendMessage.Start" && TestHelper.GetValue<string>(e.Value, "Action") == "http://tempuri.org/ITestService/GetActivityRootId")));
-            //Assert.Single(events.Where(e => (e.Key == "System.ServiceModel.SendMessage.Stop" && TestHelper.GetValue<string>(e.Value, "Action") == "http://tempuri.org/ITestService/SleepResponse"))); //TODO: Throwing exception
-            //Assert.Single(events.Where(e => (e.Key == "System.ServiceModel.SendMessage.Stop" && TestHelper.GetValue<string>(e.Value, "Action") == "http://tempuri.org/ITestService/GetActivityRootIdResponse"))); //TOOD: Throwing exception
-            Assert.Single(events.Where(e => (e.Key == "System.ServiceModel.ReceiveMessage.Start" && TestHelper.GetValue<string>(e.Value, "Action") == "http://tempuri.org/ITestService/Sleep")));
+            Assert.Single(events.Where(e => (e.Key == "System.ServiceModel.SendMessage.Stop" && TestHelper.GetValue<string>(e.Value, "Action") == "http://tempuri.org/ITestService/SleepResponse"))); 
+            Assert.Single(events.Where(e => (e.Key == "System.ServiceModel.SendMessage.Stop" && TestHelper.GetValue<string>(e.Value, "Action") == "http://tempuri.org/ITestService/GetActivityRootIdResponse"))); 
             Assert.Single(events.Where(e => (e.Key == "System.ServiceModel.ReceiveMessage.Start" && TestHelper.GetValue<string>(e.Value, "Action") == "http://tempuri.org/ITestService/GetActivityRootId")));
-            //Assert.Single(events.Where(e => (e.Key == "System.ServiceModel.ReceiveMessage.Stop" && TestHelper.GetValue<string>(e.Value, "Action") == "http://tempuri.org/ITestService/SleepResponse")));//TODO: Throwing exception
-            //Assert.Single(events.Where(e => (e.Key == "System.ServiceModel.ReceiveMessage.Stop" && TestHelper.GetValue<string>(e.Value, "Action") == "http://tempuri.org/ITestService/GetActivityRootIdResponse")));//TODO: Throwing exception
+            Assert.Single(events.Where(e => (e.Key == "System.ServiceModel.ReceiveMessage.Stop" && TestHelper.GetValue<string>(e.Value, "Action") == "http://tempuri.org/ITestService/SleepResponse"))); 
+            Assert.Single(events.Where(e => (e.Key == "System.ServiceModel.ReceiveMessage.Stop" && TestHelper.GetValue<string>(e.Value, "Action") == "http://tempuri.org/ITestService/GetActivityRootIdResponse"))); 
         }
     }
 

@@ -17,6 +17,11 @@ namespace Microsoft.ServiceModel.TelemetryCorrelation.Tests
 
         }
 
+        public void Done()
+        {
+
+        }
+
         public string GetActivityRootId()
         {
             var activity = Activity.Current;

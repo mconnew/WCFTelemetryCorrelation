@@ -134,6 +134,15 @@ namespace Microsoft.ServiceModel.TelemetryCorrelation.Tests
             return factory;
         }
 
+        internal ChannelFactory<ITestService> CreateChannelFactoryNoTelemetryCorrelationBehavior([CallerMemberName] string instancePath = "")
+        {
+            var binding = Binding;
+            var baseAddress = GetBaseAddress(binding);
+            var factory = new ChannelFactory<ITestService>(binding, baseAddress + instancePath + "/" + RelativeAddress);
+            //factory.Endpoint.EndpointBehaviors.Add(new TelemetryCorrelationBehavior());
+            return factory;
+        }
+
         public static void AddDispatchMessageInspector(ServiceHost host)
         {
             AddServiceExtensibility(host, ExtensibilityType.DispatchMessageInspector);
@@ -178,6 +187,14 @@ namespace Microsoft.ServiceModel.TelemetryCorrelation.Tests
             var filteredEvents = events.Where(e => e.Key == key);
             Assert.True(1 == filteredEvents.Count(), $"There were {filteredEvents.Count()} events with name \"{key}\"");
             return filteredEvents.First().Value;
+        }
+
+        internal static string[] GetOnlyTwoDataItem(IList<KeyValuePair<string, object>> events, string key)
+        {
+            var filteredEvents = events.Where(e => e.Key == key);
+            Assert.True(2 == filteredEvents.Count(), $"There were {filteredEvents.Count()} events with name \"{key}\"");
+            var values = from f in filteredEvents select f.Value.ToString();
+            return values.ToArray();
         }
 
         public static TValue GetValue<TValue>(object data, string propertyName)

@@ -19,10 +19,29 @@ namespace Microsoft.ServiceModel.TelemetryCorrelation
     {
         internal static IOperationHolder<T> StartOperation<T>(string name) where T : OperationTelemetry, new()
         {
+            IOperationHolder<T> operationHolder;
             Debug.WriteLine($"AppInsightLogger.StartOperation before, Thread: {Thread.CurrentThread.ManagedThreadId}, Task: {Task.CurrentId}, Activity - Name: {name}, Activity.Current?.OperationName: {Activity.Current?.OperationName},  RootId: {Activity.Current?.RootId}, SpanId: {Activity.Current?.SpanId}, ParentSpanId: {Activity.Current?.ParentSpanId} ");
-            var s = GetTelemetryClient().StartOperation<T>(name);
+
+            //TODO: Temporary. Explore 
+            var t = new T();
+            var type = t.GetType();
+            if (type.Name == "DependencyTelemetry")
+            {
+
+                var dependency = t as DependencyTelemetry;
+                dependency.Type = "WCF Service Call";
+                dependency.Name = "net.pipe or net.tcp, or http TBD";
+                dependency.Target = name;
+                //dependency.Data = name;
+                operationHolder = GetTelemetryClient().StartOperation<T>((T)(OperationTelemetry)dependency);
+            }
+            else
+            {
+                operationHolder = GetTelemetryClient().StartOperation<T>(name);
+            }
+
             Debug.WriteLine($"AppInsightLogger.StartOperation after, Thread: {Thread.CurrentThread.ManagedThreadId}, Task: {Task.CurrentId}, Activity - Name: {name}, Activity.Current?.OperationName: {Activity.Current?.OperationName}, RootId: {Activity.Current?.RootId}, SpanId: {Activity.Current?.SpanId}, ParentSpanId: {Activity.Current?.ParentSpanId} ");
-            return s;
+            return operationHolder;
         }
 
         internal static IOperationHolder<T> StartOperation<T>(Activity activity) where T : OperationTelemetry, new()

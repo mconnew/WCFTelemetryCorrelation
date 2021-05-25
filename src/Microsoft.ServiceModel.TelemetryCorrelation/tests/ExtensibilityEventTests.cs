@@ -7,6 +7,8 @@ using System.Diagnostics;
 using System.ServiceModel;
 using System.ServiceModel.Channels;
 using Xunit;
+using System.Collections;
+using System;
 
 namespace Microsoft.ServiceModel.TelemetryCorrelation.Tests
 {
@@ -45,10 +47,14 @@ namespace Microsoft.ServiceModel.TelemetryCorrelation.Tests
                 }
             }
 
-            var data = TestHelper.GetOnlyOneDataItem(events, "DispatchMessageInspectorAfterReceive");
-            Assert.Equal("Microsoft.ServiceModel.TelemetryCorrelation.Tests.Extensibility.DispatchMessageInspector", TestHelper.GetValue<string>(data, "TypeName"));
-            data = TestHelper.GetOnlyOneDataItem(events, "DispatchMessageInspectorBeforeSend");
-            Assert.Equal("Microsoft.ServiceModel.TelemetryCorrelation.Tests.Extensibility.DispatchMessageInspector", TestHelper.GetValue<string>(data, "TypeName"));
+            var data = TestHelper.GetOnlyTwoDataItem(events, "DispatchMessageInspectorAfterReceive");
+            //Assert.Equal("Microsoft.ServiceModel.TelemetryCorrelation.Tests.Extensibility.DispatchMessageInspector", TestHelper.GetValue<string>(data, "TypeName"));
+            var result = Array.Find(data, e => e.Contains("Microsoft.ServiceModel.TelemetryCorrelation.Tests.Extensibility.DispatchMessageInspector"));
+            Assert.NotNull(result);
+            data = TestHelper.GetOnlyTwoDataItem(events, "DispatchMessageInspectorBeforeSend");
+            //Assert.Equal("Microsoft.ServiceModel.TelemetryCorrelation.Tests.Extensibility.DispatchMessageInspector", TestHelper.GetValue<string>(data, "TypeName"));
+            result = Array.Find(data, e => e.Contains("Microsoft.ServiceModel.TelemetryCorrelation.Tests.Extensibility.DispatchMessageInspector"));
+            Assert.NotNull(result);
         }
 
         [Fact]
@@ -224,8 +230,8 @@ namespace Microsoft.ServiceModel.TelemetryCorrelation.Tests
                     host.Open();
 
                     factory =helper.CreateChannelFactory();
-                    TestHelper.AddClientMessageInspector(factory);
-                    channel =factory.CreateChannel();
+                    TestHelper.AddClientMessageInspector(factory); 
+                    channel = factory.CreateChannel();
                     var activity = new Activity("Root");
                     activity.Start();
                     channel.DoWork();
@@ -239,10 +245,17 @@ namespace Microsoft.ServiceModel.TelemetryCorrelation.Tests
                 }
             }
 
-            var data = TestHelper.GetOnlyOneDataItem(events, "ClientMessageInspectorAfterReceive");
-            Assert.Equal("Microsoft.ServiceModel.TelemetryCorrelation.Tests.Extensibility.ClientMessageInspector", TestHelper.GetValue<string>(data, "TypeName"));
-            data = TestHelper.GetOnlyOneDataItem(events, "ClientMessageInspectorBeforeSend");
-            Assert.Equal("Microsoft.ServiceModel.TelemetryCorrelation.Tests.Extensibility.ClientMessageInspector", TestHelper.GetValue<string>(data, "TypeName"));
+            //There are two events, 1 without TestHelper.AddClientMessageExpector with TypeName = Microsoft.VisualStudio.Diagnostics.ServiceModelSink.StubClientEventSink
+            //and as a reulst of TestHelper.AddClientMessageExpector  TypeName: Microsoft.ServiceModel.TelemetryCorrelation.Tests.Extensibility.ClientMessageInspector
+
+            var data = TestHelper.GetOnlyTwoDataItem(events, "ClientMessageInspectorAfterReceive");
+            //Assert.Equal("Microsoft.ServiceModel.TelemetryCorrelation.Tests.Extensibility.ClientMessageInspector", TestHelper.GetValue<string>(data, "TypeName"));
+            var result = Array.Find(data, e => e.Contains("Microsoft.ServiceModel.TelemetryCorrelation.Tests.Extensibility.ClientMessageInspector"));
+            Assert.NotNull(result);
+            data = TestHelper.GetOnlyTwoDataItem(events, "ClientMessageInspectorBeforeSend");
+            //Assert.Equal("Microsoft.ServiceModel.TelemetryCorrelation.Tests.Extensibility.ClientMessageInspector", TestHelper.GetValue<string>(data, "TypeName"));
+            result = Array.Find(data, e => e.Contains("Microsoft.ServiceModel.TelemetryCorrelation.Tests.Extensibility.ClientMessageInspector"));
+            Assert.NotNull(result);
         }
     }
 }

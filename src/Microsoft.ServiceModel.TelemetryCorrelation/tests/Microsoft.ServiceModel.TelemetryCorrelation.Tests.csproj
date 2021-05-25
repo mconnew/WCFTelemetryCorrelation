@@ -128,9 +128,7 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
-    <Content Include="ApplicationInsightsEtwListener.cs.txt" />
     <Compile Include="ConfigBasedService.cs" />
-    <Content Include="DiagnosticsHelper.cs.txt" />
     <Compile Include="ExtensibilityEventTests.cs" />
     <Compile Include="Extensibility\ClientMessageInspector.cs" />
     <Compile Include="ConfigTests.cs" />

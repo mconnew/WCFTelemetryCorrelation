@@ -41,7 +41,7 @@ namespace Microsoft.ServiceModel.TelemetryCorrelation
                 ActivityHelper.RestoreCurrentActivity(rootActivity);
             }
 
-            //TODO: Consider addintg this because of issue that want to be the same Activity as was for ActivityHelper.StartOperation 
+            //TODO: Consider adding this because of issue that want to be the same Activity as was for ActivityHelper.StartOperation 
             //if (TryGetRootActivity(properties, out Activity rootActivity2) &&
             //    rootActivity2 != null)
             //{

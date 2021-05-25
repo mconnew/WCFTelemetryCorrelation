@@ -15,6 +15,9 @@ namespace Microsoft.ServiceModel.TelemetryCorrelation.Tests
         void DoWork();
 
         [OperationContract]
+        void Done();
+
+        [OperationContract]
         Dictionary<string, string> GetBaggage();
 
         [OperationContract]

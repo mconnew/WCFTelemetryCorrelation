@@ -61,12 +61,14 @@ namespace Microsoft.ServiceModel.TelemetryCorrelation
 
         IAsyncResult IInputChannel.BeginTryReceive(TimeSpan timeout, AsyncCallback callback, object state)
         {
-            Debug.WriteLine($" IInputChannel.BeginTryReceivee enter, Thread: {Thread.CurrentThread.ManagedThreadId}, Task: {Task.CurrentId}, isServer:{_isServer}");
+            Debug.WriteLine($"IInputChannel.BeginTryReceive enter, Thread: {Thread.CurrentThread.ManagedThreadId}, Task: {Task.CurrentId}, isServer:{_isServer}");
+            Debug.WriteLine($"IInputChannel.BeginTryReceive enter con't Activity - RootId: {Activity.Current?.RootId}, SpanId: {Activity.Current?.SpanId}, ParentSpanId: {Activity.Current?.ParentSpanId} ");
 
             var btr = _innerDuplexSessionChannel.BeginTryReceive(timeout, callback, state);
 
             Debug.WriteLine($"IInputChannel.BeginTryReceivee after _innerDuplexSessionChannel.BeginTryReceive, Thread: {Thread.CurrentThread.ManagedThreadId}, Task: {Task.CurrentId}, isServer:{_isServer}");
-            
+            Debug.WriteLine($"IInputChannel.BeginTryReceive after con't Activity - RootId: {Activity.Current?.RootId}, SpanId: {Activity.Current?.SpanId}, ParentSpanId: {Activity.Current?.ParentSpanId} ");
+
             return btr;
         }
 
@@ -212,7 +214,9 @@ namespace Microsoft.ServiceModel.TelemetryCorrelation
 
         IAsyncResult IOutputChannel.BeginSend(Message message, AsyncCallback callback, object state)
         {
-            Debug.WriteLine($"IOutputChannel.BeginSend, Thread: {Thread.CurrentThread.ManagedThreadId}, Task: {Task.CurrentId}, message {message}");
+            Debug.WriteLine($"IOutputChannel.BeginSend, Thread: {Thread.CurrentThread.ManagedThreadId}, Task: {Task.CurrentId}, message {message}, _isServer:{ _isServer}");
+            Debug.WriteLine($"IOutputChannel.BeginSend (OperationContext.Current != null): {OperationContext.Current != null}");
+
             if (!_isServer)
             {
                 message = ActivityHelper.StartSendMessage(message, _pendingActivities);
@@ -220,13 +224,14 @@ namespace Microsoft.ServiceModel.TelemetryCorrelation
             }
 
             var bs =  _innerDuplexSessionChannel.BeginSend(message, callback, state);
-            Debug.WriteLine($"IOutputChannel.BeginSend _innerDuplexSessionChannel.BeginSend, Thread: {Thread.CurrentThread.ManagedThreadId}, Task: {Task.CurrentId}, ");
+            Debug.WriteLine($"IOutputChannel.BeginSend _innerDuplexSessionChannel.BeginSend, Thread: {Thread.CurrentThread.ManagedThreadId}, Task: {Task.CurrentId}, _isServer:{ _isServer}");
             return bs;
         }
 
         IAsyncResult IOutputChannel.BeginSend(Message message, TimeSpan timeout, AsyncCallback callback, object state)
         {
-            Debug.WriteLine($"IOutputChannel.BeginSend enter, Thread: {Thread.CurrentThread.ManagedThreadId}, Task: {Task.CurrentId}, message: {message}");
+            Debug.WriteLine($"IOutputChannel.BeginSend enter, Thread: {Thread.CurrentThread.ManagedThreadId}, Task: {Task.CurrentId}, message: {message}, _isServer:{ _isServer}");
+            Debug.WriteLine($"IOutputChannel.BeginSend (OperationContext.Current != null): {OperationContext.Current != null}");
             if (!_isServer)
             {
                 message = ActivityHelper.StartSendMessage(message, _pendingActivities);
@@ -234,7 +239,7 @@ namespace Microsoft.ServiceModel.TelemetryCorrelation
             }
 
             var bs =  _innerDuplexSessionChannel.BeginSend(message, timeout, callback, state);
-            Debug.WriteLine($"IOutputChannel.BeginSend after innerDuplexSessionChannel.BeginSend, Thread: {Thread.CurrentThread.ManagedThreadId}, Task: {Task.CurrentId}, ");
+            Debug.WriteLine($"IOutputChannel.BeginSend after innerDuplexSessionChannel.BeginSend, Thread: {Thread.CurrentThread.ManagedThreadId}, Task: {Task.CurrentId},  _isServer:{ _isServer}");
             return bs;
 
         }
@@ -255,6 +260,7 @@ namespace Microsoft.ServiceModel.TelemetryCorrelation
         void IOutputChannel.Send(Message message)
         {
             Debug.WriteLine($"IOutputChannel.Send enter, Thread: {Thread.CurrentThread.ManagedThreadId}, Task: {Task.CurrentId}, message: {message}, isServer: {_isServer}");
+            Debug.WriteLine($"IOutputChannel.BeginSend (OperationContext.Current != null): {OperationContext.Current != null}");
 
             if (!_isServer)
             {
@@ -273,8 +279,9 @@ namespace Microsoft.ServiceModel.TelemetryCorrelation
 
         void IOutputChannel.Send(Message message, TimeSpan timeout)
         {
-            IOperationHolder<DependencyTelemetry> opHolder = null;
+            //IOperationHolder<DependencyTelemetry> opHolder = null;
             Debug.WriteLine($"IOutputChannel.Send timeout enter, Thread: {Thread.CurrentThread.ManagedThreadId}, Task: {Task.CurrentId}, isServer:{_isServer}, message: {message}, isServer: {_isServer}");
+            Debug.WriteLine($"IOutputChannel.BeginSend (OperationContext.Current != null): {OperationContext.Current != null}");
 
             if (!_isServer)
             {

@@ -47,6 +47,9 @@ namespace Microsoft.ServiceModel.TelemetryCorrelation
         private static bool s_initialized = false;
         private static object s_classLock = new object();
         private static Action<Activity> s_setCurrent;
+        private static Func<bool> s_getIsFinished;
+        private static ConcurrentDictionary<string, Activity> _activityForSelectedOperation = new ConcurrentDictionary<string, Activity>();
+
 
         internal static bool TryGetRootActivityFromOperationContext(out Activity activity)
         {
@@ -69,6 +72,12 @@ namespace Microsoft.ServiceModel.TelemetryCorrelation
             s_setCurrent(activity);
         }
 
+        internal static bool GetIsFinishedActivity(Activity activity)
+        {
+            EnsureInitialized();
+            return s_getIsFinished();
+        }
+
         internal static void EnsureInitialized()
         {
             if(!s_initialized)
@@ -81,6 +90,9 @@ namespace Microsoft.ServiceModel.TelemetryCorrelation
                         {
                             var setCurrentMethodInfo = typeof(Activity).GetMethod("set_Current", BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Static);
                             s_setCurrent = (Action<Activity>)setCurrentMethodInfo.CreateDelegate(typeof(Action<Activity>));
+                            //var getIsFinishedtMemberInfo = typeof(Activity).GetMember("System.Diagnostics.Activity+State", BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Static);
+                            //s_getIsFinished = (Func<bool>)getIsFinishedtMemberInfo[0].; //.CreateDelegate(typeof(Func<bool>));
+
                         }
                         catch
                         {
@@ -95,7 +107,6 @@ namespace Microsoft.ServiceModel.TelemetryCorrelation
             }
         }
 
-
         internal static IOperationHolder<T> StartActivity<T>(string action, string WcfMsg, object value) where T : OperationTelemetry, new()
         {
             IOperationHolder<T>  opHolder = null;
@@ -105,7 +116,7 @@ namespace Microsoft.ServiceModel.TelemetryCorrelation
                 opHolder = AppInsightLogger.StartOperation<T>(action);
             }
 
-            if (DiagnosticsHelper.NumListeners > 2) //there are 2 listeners set up in Microsoft.ServiceModel.TelemetryCorrelation, but if the client sets up, like we do in tests, then there will be more
+            if (DiagnosticsHelper.NumListeners > 2) //TODO: Fix this logic. Currently like this because there are 2 listeners set up in Microsoft.ServiceModel.TelemetryCorrelation, but if the client subscripts to DiagnosticsListener, like we do in tests, then there will be more
             {
                 //DiagnosticListener.StartActivity(activity, new { Action = action });
                 DiagnosticListener.Write(WcfMsg, value);
@@ -228,7 +239,7 @@ namespace Microsoft.ServiceModel.TelemetryCorrelation
                 //}
                 //else
                 //{
-                activity.Stop();
+                activity.Stop(); 
                 //}
             }
 
@@ -244,8 +255,11 @@ namespace Microsoft.ServiceModel.TelemetryCorrelation
 
         internal static void SelectOperation(string eventName, string typeName, string selectedOperation, long duration)
         {
+            _activityForSelectedOperation.GetOrAdd(selectedOperation, Activity.Current);
+            Debug.WriteLine($"ActivityHelper.SelectOperation end Thread: {Thread.CurrentThread.ManagedThreadId}, Task: {Task.CurrentId}, Activity - RootId: {Activity.Current?.RootId}, SpanId: {Activity.Current?.SpanId}, ParentSpanId: {Activity.Current?.ParentSpanId} ");
             EnsureInitialized();
             DiagnosticListener.Write(eventName, new { TypeName = typeName, SelectedOperation = selectedOperation, Duration = new TimeSpan(duration).TotalMilliseconds });
+            Debug.WriteLine($"ActivityHelper.SelectOperation exit, Thread: {Thread.CurrentThread.ManagedThreadId}, Task: {Task.CurrentId}, Activity - RootId: {Activity.Current?.RootId}, SpanId: {Activity.Current?.SpanId}, ParentSpanId: {Activity.Current?.ParentSpanId} ");
         }
 
         internal static void InstanceProvider(string eventName, string typeName, int instanceHash, long duration)
@@ -267,70 +281,113 @@ namespace Microsoft.ServiceModel.TelemetryCorrelation
         }
 
         public const string CorrelationContextHttpHeaderName = "Correlation-Context";
-  
+
+        //public static Message StartSendMessage(Message message, Hashtable pendingActivities)
+        //{
+        //    Debug.WriteLine($"ActivityHelper.StartSendMessage Enter, Thread: {Thread.CurrentThread.ManagedThreadId}, Task: {Task.CurrentId},");
+
+        //    EnsureInitialized();
+        //    if (DiagnosticListener.IsEnabled() && DiagnosticListener.IsEnabled(SendMessageActivityName))
+        //    {
+        //        IOperationHolder<DependencyTelemetry> opHolder = null;
+        //        var activity = new Activity(SendMessageActivityName);
+        //        if (DiagnosticListener.IsEnabled(SendMessageActivityStartName))
+        //        {
+        //            string action = message.Headers.Action ?? string.Empty;
+
+        //            opHolder = StartActivity<DependencyTelemetry>(action, SendMessageActivityStartName, new { Action = action });
+
+        //            Debug.WriteLine($"ActivityHelper.StartSendMessage, Thread: {Thread.CurrentThread.ManagedThreadId}, Task: {Task.CurrentId},, opHolder.Telemetry.Context.Operation.Id: {opHolder.Telemetry.Context.Operation.Id}, " +
+        //                $"opHolder.Telemetry.Context.Operation.ParentId {opHolder.Telemetry.Context.Operation.ParentId}");
+        //        }
+        //        else
+        //        {
+        //            activity.Start();
+        //        }
+
+        //        Debug.WriteLine($"ActivityHelper.StartSendMessage after activity, Thread: {Thread.CurrentThread.ManagedThreadId}, Task: {Task.CurrentId}, activity.Id: {activity.Id}, activity.ParentId: {activity.ParentId}");
+
+        //        var activityAi = Activity.Current;
+        //        if (activity.Id != activityAi.Id)
+        //            Debug.WriteLine($"ActivityHelper.StartSendMessage activity.Id != activityAi.Id");
+
+        //        Debug.WriteLine($"ActivityHelper.StartSendMessage after Activity.Current, Thread: {Thread.CurrentThread.ManagedThreadId}, Task: {Task.CurrentId}, Activity.Current.Id: {activityAi.Id}, Activity.Current.ParentId: {activityAi.ParentId}");
+
+        //        var activityHeader = new ActivityMessageHeader(activityAi);
+        //        message.Headers.Add(MessageHeader.CreateHeader(
+        //            ActivityMessageHeader.ActivityHeaderName,
+        //            ActivityMessageHeader.ActivityHeaderNamespace,
+        //            activityHeader,
+        //            ActivityMessageHeader.Serializer,
+        //            mustUnderstand: false));
+        //        message.Properties.Add(SendRequestActivityPropertyName, new Tuple<Activity, IOperationHolder<DependencyTelemetry>>(activityAi, opHolder));
+
+        //        if (message.Headers.MessageId != null && message.Headers.MessageId.TryGetGuid(out Guid guid))
+        //        {
+        //            lock (pendingActivities)
+        //            {
+        //                pendingActivities.Add(guid, new Tuple<Activity, IOperationHolder<DependencyTelemetry>>(activityAi, opHolder)); //TODO: What are pendingActivities used for?
+        //            }
+        //        }
+        //    }
+
+        //    Debug.WriteLine($"ActivityHelper.StartSendMessage Exit, Thread: {Thread.CurrentThread.ManagedThreadId}, Task: {Task.CurrentId},");
+
+        //    return message;
+
+        //}
+
         public static Message StartSendMessage(Message message, Hashtable pendingActivities)
         {
-            Debug.WriteLine($"ActivityHelper.StartSendMessage Enter, Thread: {Thread.CurrentThread.ManagedThreadId}, Task: {Task.CurrentId},");
+            message = StartSendMessage(message);
 
-            EnsureInitialized();
-            if (DiagnosticListener.IsEnabled() && DiagnosticListener.IsEnabled(SendMessageActivityName))
+            if (message.Headers.MessageId != null && message.Headers.MessageId.TryGetGuid(out Guid guid))
             {
-                IOperationHolder<DependencyTelemetry> opHolder = null;
-                var activity = new Activity(SendMessageActivityName);
-                if (DiagnosticListener.IsEnabled(SendMessageActivityStartName))
+                lock (pendingActivities)
                 {
-                    string action = message.Headers.Action ?? string.Empty;
-
-                    opHolder = StartActivity<DependencyTelemetry>(action, SendMessageActivityStartName, new { Action = action });
-
-                    Debug.WriteLine($"ActivityHelper.StartSendMessage, Thread: {Thread.CurrentThread.ManagedThreadId}, Task: {Task.CurrentId},, opHolder.Telemetry.Context.Operation.Id: {opHolder.Telemetry.Context.Operation.Id}, " +
-                        $"opHolder.Telemetry.Context.Operation.ParentId {opHolder.Telemetry.Context.Operation.ParentId}");
-                }
-                else
-                {
-                    activity.Start();
-                }
-
-                Debug.WriteLine($"ActivityHelper.StartSendMessage after activity, Thread: {Thread.CurrentThread.ManagedThreadId}, Task: {Task.CurrentId}, activity.Id: {activity.Id}, activity.ParentId: {activity.ParentId}");
-
-                var activityAi = Activity.Current;
-                if (activity.Id != activityAi.Id)
-                    Debug.WriteLine($"ActivityHelper.StartSendMessage activity.Id != activityAi.Id");
-
-                Debug.WriteLine($"ActivityHelper.StartSendMessage after Activity.Current, Thread: {Thread.CurrentThread.ManagedThreadId}, Task: {Task.CurrentId}, Activity.Current.Id: {activityAi.Id}, Activity.Current.ParentId: {activityAi.ParentId}");
-
-                var activityHeader = new ActivityMessageHeader(activityAi);
-                message.Headers.Add(MessageHeader.CreateHeader(
-                    ActivityMessageHeader.ActivityHeaderName,
-                    ActivityMessageHeader.ActivityHeaderNamespace,
-                    activityHeader,
-                    ActivityMessageHeader.Serializer,
-                    mustUnderstand: false));
-                message.Properties.Add(SendRequestActivityPropertyName, new Tuple<Activity, IOperationHolder<DependencyTelemetry>>(activityAi, opHolder));
-
-                if (message.Headers.MessageId != null && message.Headers.MessageId.TryGetGuid(out Guid guid))
-                {
-                    lock (pendingActivities)
+                    if (message.Properties.TryGetValue(SendRequestActivityPropertyName, out Tuple<Activity, IOperationHolder<DependencyTelemetry>> activity))
                     {
-                        pendingActivities.Add(guid, new Tuple<Activity, IOperationHolder<DependencyTelemetry>>(activityAi, opHolder)); //TODO: What are pendingActivities used for?
+                        Debug.WriteLine($"ActivityHelper.StartSendMessage add Tuple to pendingactivities, Thread: {Thread.CurrentThread.ManagedThreadId}, Task: {Task.CurrentId}, Activity - RootId: {Activity.Current?.RootId}, SpanId: {Activity.Current?.SpanId}, ParentSpanId: {Activity.Current?.ParentSpanId} ");
+
+                        pendingActivities.Add(guid, new Tuple<Activity, IOperationHolder<DependencyTelemetry>>(activity.Item1, activity.Item2)); 
                     }
                 }
             }
-
-            Debug.WriteLine($"ActivityHelper.StartSendMessage Exit, Thread: {Thread.CurrentThread.ManagedThreadId}, Task: {Task.CurrentId},");
-
+        
             return message;
         }
 
         public static Message StartSendMessage(Message message)
         {
-            Debug.WriteLine($"ActivityHelper.StartSendMessage Enter, Thread: {Thread.CurrentThread.ManagedThreadId}, Task: {Task.CurrentId},");
+            Debug.WriteLine($"ActivityHelper.StartSendMessage enter, Thread: {Thread.CurrentThread.ManagedThreadId}, Task: {Task.CurrentId}, Activity - RootId: {Activity.Current?.RootId}, SpanId: {Activity.Current?.SpanId}, ParentSpanId: {Activity.Current?.ParentSpanId} ");
 
             EnsureInitialized();
+
+            Activity activity = null;
+            //// TODO: Copy comment from StopOperation
+            //// The operation activity might not be in the outgoing message properties if the OperationInvoker events were enabled after
+            //// an operation was started but before it completed.
+            //if ((Activity.Current == null) && (OperationContext.Current != null) && OperationContext.Current.OutgoingMessageProperties.TryGetValue(OperationActivityPropertyName, out  activity))
+            //{
+            //    Debug.WriteLine($"ActivityHelper.StartSendMessage OperationContext found Activity, Thread: {Thread.CurrentThread.ManagedThreadId}, Task: {Task.CurrentId}, activity.Id: {activity.Id}, activity.ParentId: {activity.ParentId}");
+            //    SetCurrentActivity(activity);
+            //    Debug.WriteLine($"ActivityHelper.StartSendMessage after SetActivity, Thread: {Thread.CurrentThread.ManagedThreadId}, Task: {Task.CurrentId}, Activity - RootId: {Activity.Current?.RootId}, SpanId: {Activity.Current?.SpanId}, ParentSpanId: {Activity.Current?.ParentSpanId} ");
+            //}
+
+            if(Activity.Current == null)
+            {
+                var operation = message.Headers.Action.Split('/')[4]; //TODO: Temporory. Don't hardcode getting operation
+                activity = _activityForSelectedOperation.GetOrAdd(operation, Activity.Current); 
+                SetCurrentActivity(activity);
+                _activityForSelectedOperation.TryRemove(operation, out activity);
+            }
+
             if (DiagnosticListener.IsEnabled() && DiagnosticListener.IsEnabled(SendMessageActivityName))
             {
-                var activity = new Activity(SendMessageActivityName);
                 IOperationHolder<DependencyTelemetry> opHolder = null;
+                
+                if (activity == null)
+                    activity = new Activity(SendMessageActivityName);
 
                 if (DiagnosticListener.IsEnabled(SendMessageActivityStartName))
                 {
@@ -338,7 +395,8 @@ namespace Microsoft.ServiceModel.TelemetryCorrelation
 
                     opHolder = StartActivity<DependencyTelemetry>(action, SendMessageActivityStartName, new { Action = action });
 
-                    Debug.WriteLine($"ActivityHelper.StartSendMessage, Thread: {Thread.CurrentThread.ManagedThreadId}, Task: {Task.CurrentId}, opHolder.Telemetry.Context.Operation.Id: {opHolder.Telemetry.Context.Operation.Id}, " +
+                    Debug.WriteLine($"ActivityHelper.StartSendMessage after StartActivity, Thread: {Thread.CurrentThread.ManagedThreadId}, Task: {Task.CurrentId}, Activity - RootId: {Activity.Current?.RootId}, SpanId: {Activity.Current?.SpanId}, ParentSpanId: {Activity.Current?.ParentSpanId} ");
+                    Debug.WriteLine($"ActivityHelper.StartSendMessage after StartActivity opHolder details, Thread: {Thread.CurrentThread.ManagedThreadId}, Task: {Task.CurrentId}, opHolder.Telemetry.Context.Operation.Id: {opHolder.Telemetry.Context.Operation.Id}, " +
                         $"opHolder.Telemetry.Context.Operation.ParentId {opHolder.Telemetry.Context.Operation.ParentId}");
 
                 }
@@ -347,14 +405,14 @@ namespace Microsoft.ServiceModel.TelemetryCorrelation
                     activity.Start();
                 }
 
-
+                Debug.WriteLine($"ActivityHelper.StartSendMessage after activity, Thread: {Thread.CurrentThread.ManagedThreadId}, Task: {Task.CurrentId}, Activity - RootId: {Activity.Current?.RootId}, SpanId: {Activity.Current?.SpanId}, ParentSpanId: {Activity.Current?.ParentSpanId} ");
                 Debug.WriteLine($"ActivityHelper.StartSendMessage after activity, Thread: {Thread.CurrentThread.ManagedThreadId}, Task: {Task.CurrentId}, activity.Id: {activity.Id}, activity.ParentId: {activity.ParentId}");
 
                 var activityAi = Activity.Current;
                 if (activity.Id != activityAi.Id)
                     Debug.WriteLine($"ActivityHelper.StartSendMessage activity.Id != activityAi.Id");
 
-                Debug.WriteLine($"ActivityHelper.StartSendMessage, Thread: {Thread.CurrentThread.ManagedThreadId}, Task: {Task.CurrentId}, Activity.Current.Id: {activityAi.Id}, Activity.Current.ParentId: {activityAi.ParentId}");
+                //Debug.WriteLine($"ActivityHelper.StartSendMessage, Thread: {Thread.CurrentThread.ManagedThreadId}, Task: {Task.CurrentId}, Activity.Current.Id: {activityAi.Id}, Activity.Current.ParentId: {activityAi.ParentId}");
 
                 var activityHeader = new ActivityMessageHeader(activityAi);
                 message.Headers.Add(MessageHeader.CreateHeader(
@@ -366,7 +424,7 @@ namespace Microsoft.ServiceModel.TelemetryCorrelation
                 message.Properties.Add(SendRequestActivityPropertyName, new Tuple<Activity, IOperationHolder<DependencyTelemetry>>(activityAi, opHolder));
             }
 
-            Debug.WriteLine($"ActivityHelper.StartSendMessage, Thread: {Thread.CurrentThread.ManagedThreadId}, Task: {Task.CurrentId}, Exit");
+            Debug.WriteLine($"ActivityHelper.StartSendMessage end, Thread: {Thread.CurrentThread.ManagedThreadId}, Task: {Task.CurrentId}, Activity - RootId: {Activity.Current?.RootId}, SpanId: {Activity.Current?.SpanId}, ParentSpanId: {Activity.Current?.ParentSpanId} ");
 
             return message;
         }
@@ -433,7 +491,7 @@ namespace Microsoft.ServiceModel.TelemetryCorrelation
                 return;
             }
 
-            ActivityHelper.SetCurrentActivity(activity.Item1);
+            SetCurrentActivity(activity.Item1);
 
             if (DiagnosticListener.IsEnabled(SendMessageActivityStopName))
             {

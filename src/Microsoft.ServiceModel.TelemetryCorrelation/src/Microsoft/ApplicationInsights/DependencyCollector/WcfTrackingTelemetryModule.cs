@@ -50,7 +50,7 @@ namespace Microsoft.ApplicationInsights.DependencyCollector
                     {
                         try
                         {
-                            this.subcription = DiagnosticsHelper.SubscribeToListener(); //TODO: Added this so that can remove DiagnosticListener in Tests code, and when Microsofot.ServiceModel.TeleemtryCorrelation is used elsewhere.
+                            this.subcription = DiagnosticsHelper.SubscribeToListener(); //TODO: Added this so that can remove DiagnosticListener in Tests code, and when Microsofot.ServiceModel.TelemetryCorrelation is used elsewhere.
 
                         }
                         catch (Exception exc)

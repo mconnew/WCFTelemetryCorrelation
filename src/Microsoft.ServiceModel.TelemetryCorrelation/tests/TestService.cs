@@ -14,9 +14,16 @@ namespace Microsoft.ServiceModel.TelemetryCorrelation.Tests
     [ServiceBehavior(ConcurrencyMode = ConcurrencyMode.Multiple)]
     internal class TestService : ITestService
     {
+        public static AutoResetEvent hostEvent = new AutoResetEvent(false);
+
         public void DoWork()
         {
             
+        }
+
+        public void Done()
+        {
+            hostEvent.Set();
         }
 
         public string GetActivityRootId()
@@ -47,6 +54,7 @@ namespace Microsoft.ServiceModel.TelemetryCorrelation.Tests
             try { 
                 var helper = TestHelper.NetNamedPipes;
                 factory = helper.CreateChannelFactory(instancePath);
+                //factory = helper.CreateChannelFactoryNoTelemetryCorrelationBehavior(instancePath); TODO: //this duplicates the issue has with FrontEndWCFService, missing behavior
                 channel = factory.CreateChannel();
                 tc.TrackTrace("before GetActivityRootId2Async");
                 var id = channel.GetActivityRootId2Async().Result;
