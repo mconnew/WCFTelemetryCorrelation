@@ -1,9 +1,13 @@
 ﻿// Copyright (c) Microsoft Corporation.
 // Licensed under the MIT license.
 
+using Microsoft.ApplicationInsights.DependencyCollector;
 using System;
 using System.Diagnostics;
 using System.Diagnostics.Tracing;
+using System.ServiceModel;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace Microsoft.ServiceModel.TelemetryCorrelation
 {
@@ -26,7 +30,15 @@ namespace Microsoft.ServiceModel.TelemetryCorrelation
 
         protected override void OnEventWritten(EventWrittenEventArgs eventData)
         {
-            if (!ActivityHelper.DiagnosticListener.IsEnabled())
+            Debug.WriteLine($"DiagnosticSourceBridgeEventListener OnEventWritten enter, Thread: {Thread.CurrentThread.ManagedThreadId}, Task: {Task.CurrentId}, Activity - RootId: {Activity.Current?.RootId}, SpanId: {Activity.Current?.SpanId}, ParentSpanId: {Activity.Current?.ParentSpanId} ");
+
+            //if (!ActivityHelper.DiagnosticListener.IsEnabled())
+            //{
+            //    return;
+            //}
+
+            //TODO: Review if should replace above with this?
+            if (!WcfTrackingTelemetryModule.IsEnabled)
             {
                 return;
             }
@@ -34,22 +46,52 @@ namespace Microsoft.ServiceModel.TelemetryCorrelation
             Activity activity;
             if(!ActivityHelper.TryGetRootActivityFromOperationContext(out activity) || activity == null)
             {
+                Debug.WriteLine($"DiagnosticSourceBridgeEventListener OnEventWritten TryGetRootActivityFromOperationContext failed , Thread: {Thread.CurrentThread.ManagedThreadId}, Task: {Task.CurrentId}, Activity - RootId: {Activity.Current?.RootId}, SpanId: {Activity.Current?.SpanId}, ParentSpanId: {Activity.Current?.ParentSpanId} ");
+
                 activity = Activity.Current;
                 if (activity == null)
                 {
+                    Debug.WriteLine($"DiagnosticSourceBridgeEventListener OnEventWritten Activity.Current null , Thread: {Thread.CurrentThread.ManagedThreadId}, Task: {Task.CurrentId}, Activity - RootId: {Activity.Current?.RootId}, SpanId: {Activity.Current?.SpanId}, ParentSpanId: {Activity.Current?.ParentSpanId} ");
+
                     return;
                 }
             }
 
-            if(!ActivityHelper.DiagnosticListener.IsEnabled(eventData.EventName))
+            //TODO: Review if should comment out.
+            //if (!ActivityHelper.DiagnosticListener.IsEnabled(eventData.EventName))
+            //{
+            //    return;
+            //}
+
+            //TODO: IsFinished property is not public, but this should work to determine if already stopped, which occurs in ActivityHelper.StopOperation.
+            //Investigate whether this is an issue. May not be because duration information is not collected for DispatchMessageFormatterSerialize etc. as is done in original code.
+            if (activity.Duration > new TimeSpan(0)) 
             {
-                return;
+                //Debugger.Break();
+                Debug.WriteLine($"WARNING: DiagnosticSourceBridgeEventListener OnEventWritten befire ActivityHelper.SetCurrentActivity , Thread: {Thread.CurrentThread.ManagedThreadId}, Task: {Task.CurrentId}, " +
+                    $"eventData.EventName: {eventData.EventName}, activity.RootId: {activity.RootId}, activity.SpanId: {activity.SpanId}, activity.ParentId: {activity.ParentId}, " +
+                    $"activity.Durarion {activity.Duration}, Activity - RootId: {Activity.Current?.RootId}, SpanId: {Activity.Current?.SpanId}, ParentSpanId: {Activity.Current?.ParentSpanId} ");
+                //activity.Start();
+            }
+            else
+            {
+                ActivityHelper.SetCurrentActivity(activity);
             }
 
-            ActivityHelper.SetCurrentActivity(activity);
-
-            switch(eventData.EventName)
+            Debug.WriteLine($"DiagnosticSourceBridgeEventListener OnEventWritten after SetCurrentActivity , Thread: {Thread.CurrentThread.ManagedThreadId}, Task: {Task.CurrentId}, Activity - RootId: {Activity.Current?.RootId}, SpanId: {Activity.Current?.SpanId}, ParentSpanId: {Activity.Current?.ParentSpanId} ");
+            Debug.WriteLine($"DiagnosticSourceBridgeEventListener OnEventWritten eventData.EventName {eventData.EventName}");
+            Debug.WriteLine($"DiagnosticSourceBridgeEventListener OnEventWritten (OperationContext.Current != null): {OperationContext.Current != null}");
+            if ((OperationContext.Current != null) && OperationContext.Current.OutgoingMessageProperties.TryGetValue(ActivityHelper.OperationActivityPropertyName, out activity))
             {
+                Debug.WriteLine($"DiagnosticSourceBridgeEventListener OnEventWritten, Thread: {Thread.CurrentThread.ManagedThreadId}, Task: {Task.CurrentId}, activity.Id: {activity.Id}, activity.ParentId: {activity.ParentId}");
+
+            }
+
+            switch (eventData.EventName)
+            {
+                //case "Message":
+                //    Debugger.Break();
+                //    break;
                 case "DispatchMessageInspectorAfterReceive":
                 case "DispatchMessageInspectorBeforeSend":
                 case "ClientMessageInspectorAfterReceive":
@@ -58,6 +100,10 @@ namespace Microsoft.ServiceModel.TelemetryCorrelation
                 case "ParameterInspectorBefore":
                 case "DispatchMessageFormatterDeserialize":
                 case "DispatchMessageFormatterSerialize":
+                    ////TODO: Added the two lines below for testing temporarily
+                    //Debugger.Break();
+                    //ActivityHelper.WriteTimedEvent(eventData.EventName, GetStringFromEventData(eventData, "TypeName"), GetLongFromEventData(eventData, "Duration"));
+                    //break;
                 case "ClientMessageFormatterDeserialize":
                 case "ClientMessageFormatterSerialize":
                     ActivityHelper.WriteTimedEvent(eventData.EventName, GetStringFromEventData(eventData, "TypeName"), GetLongFromEventData(eventData, "Duration"));

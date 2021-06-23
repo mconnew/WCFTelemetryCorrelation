@@ -34,12 +34,19 @@ namespace Microsoft.ServiceModel.TelemetryCorrelation
 
         public static void RestoreCurrentActivity(this MessageProperties properties)
         {
-            if (Activity.Current == null && 
+            if (Activity.Current == null &&
                 TryGetRootActivity(properties, out Activity rootActivity) &&
                 rootActivity != null)
             {
                 ActivityHelper.RestoreCurrentActivity(rootActivity);
             }
+
+            //TODO: Consider adding this because of issue that want to be the same Activity as was for ActivityHelper.StartOperation 
+            //if (TryGetRootActivity(properties, out Activity rootActivity2) &&
+            //    rootActivity2 != null)
+            //{
+            //    ActivityHelper.SetCurrentActivity(rootActivity2);
+            //}
         }
     }
 }

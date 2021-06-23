@@ -1,34 +1,96 @@
 ﻿// Copyright (c) Microsoft Corporation.
 // Licensed under the MIT license.
 
+using Microsoft.ApplicationInsights;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Runtime.CompilerServices;
 using System.ServiceModel;
 using System.Threading;
+using System.Threading.Tasks;
 
 namespace Microsoft.ServiceModel.TelemetryCorrelation.Tests
 {
     [ServiceBehavior(ConcurrencyMode = ConcurrencyMode.Multiple)]
     internal class TestService : ITestService
     {
+        public static AutoResetEvent hostEvent = new AutoResetEvent(false);
+
         public void DoWork()
         {
             
         }
 
+        public void Done()
+        {
+            hostEvent.Set();
+        }
+
         public string GetActivityRootId()
         {
+            TelemetryClient tc = new TelemetryClient();
+            tc.TrackTrace("GetActivityRootId start");
+
             var activity = Activity.Current;
             if (activity == null)
             {
                 return null;
             }
 
+            tc.TrackTrace("GetActivityRootId end");
+
             return activity.RootId;
+        }
+
+        public string GetActivityRootId2Hop([CallerMemberName] string instancePath = "")
+        {
+            TelemetryClient tc = new TelemetryClient();
+            tc.TrackTrace("GetActivityRootId2Hop start");
+
+            ServiceHost host = null;
+            ChannelFactory<ITestService> factory = null;
+            ITestService channel = null;
+
+            try { 
+                var helper = TestHelper.NetNamedPipes;
+                factory = helper.CreateChannelFactory(instancePath);
+                //factory = helper.CreateChannelFactoryNoTelemetryCorrelationBehavior(instancePath); TODO: //this duplicates the issue has with FrontEndWCFService, missing behavior
+                channel = factory.CreateChannel();
+                tc.TrackTrace("before GetActivityRootId2Async");
+                var id = channel.GetActivityRootId2Async().Result;
+                tc.TrackTrace("after  GetActivityRootId2Async");
+
+                return id;
+            }
+            finally
+            {
+                tc.TrackTrace("GetActivityRootId2Hop end");
+                tc.Flush();
+                TestHelper.Cleanup(channel, factory, host);
+            }
+        }
+
+        public Task<string> GetActivityRootId2Async()
+        {
+            TelemetryClient tc = new TelemetryClient();
+            tc.TrackTrace("GetActivityRootId start");
+
+            var activity = Activity.Current;
+            if (activity == null)
+            {
+                return null;
+            }
+
+            tc.TrackTrace("GetActivityRootId end");
+
+            return Task.FromResult(activity.RootId);
         }
 
         public Dictionary<string, string> GetBaggage()
         {
+            TelemetryClient tc = new TelemetryClient();
+            tc.TrackTrace("GetBaggage start"); 
+
             var activity = Activity.Current;
             if(activity == null)
             {
@@ -41,6 +103,7 @@ namespace Microsoft.ServiceModel.TelemetryCorrelation.Tests
                 ((ICollection<KeyValuePair<string, string>>)dictionary).Add(item);
             }
 
+            tc.TrackTrace("GetBaggage end");
             return dictionary;
         }
 

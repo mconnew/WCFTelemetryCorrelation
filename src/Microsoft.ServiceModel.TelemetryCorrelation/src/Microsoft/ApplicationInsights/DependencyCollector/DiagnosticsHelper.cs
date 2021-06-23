@@ -5,15 +5,19 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 
-namespace Microsoft.ServiceModel.TelemetryCorrelation.Tests
+namespace Microsoft.ApplicationInsights.DependencyCollector
 {
-    internal class DiagnosticsHelper
+    public class DiagnosticsHelper
     {
-        internal static Subscription SubscribeToListener()
+        public static int NumListeners = 0;
+
+        public static Subscription SubscribeToListener()
         {
             var subscription = new Subscription();
             var allListenerSubscription = DiagnosticListener.AllListeners.Subscribe((listener) =>
             {
+                NumListeners += 1;
+
                 if (listener.Name == "System.ServiceModel.TelemetryCorrelation")
                 {
                     subscription.RegisterDisposable(listener.Subscribe((KeyValuePair<string, object> evnt) =>
@@ -28,7 +32,7 @@ namespace Microsoft.ServiceModel.TelemetryCorrelation.Tests
         }
     }
 
-    internal class Subscription : IDisposable
+    public class Subscription : IDisposable
     {
         private bool _disposed;
         private List<IDisposable> _registeredDisposables = new List<IDisposable>();
@@ -52,7 +56,9 @@ namespace Microsoft.ServiceModel.TelemetryCorrelation.Tests
         {
             lock (_events)
             {
+                Debug.WriteLine($"DiagnostcisListenerSubscription.AddEvent: {evnt}");
                 _events.Add(evnt);
+                
             }
         }
 

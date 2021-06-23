@@ -1,6 +1,9 @@
 ﻿// Copyright (c) Microsoft Corporation.
 // Licensed under the MIT license.
 
+using Microsoft.ApplicationInsights;
+using Microsoft.ApplicationInsights.DependencyCollector;
+using Microsoft.ApplicationInsights.Extensibility;
 using System.Diagnostics;
 using System.ServiceModel;
 using System.ServiceModel.Channels;
@@ -13,6 +16,8 @@ namespace Microsoft.ServiceModel.TelemetryCorrelation.Tests
         [Fact]
         public void BasicHttpClientActivityPropagation()
         {
+            var tc = TestHelper.InitAiConfigAndGetTelemetyrClient();
+
             using (var subscription = DiagnosticsHelper.SubscribeToListener())
             {
                 ServiceHost host = null;
@@ -49,6 +54,8 @@ namespace Microsoft.ServiceModel.TelemetryCorrelation.Tests
         [Fact]
         public void NetTcpClientActivityPropagation()
         {
+            var tc = TestHelper.InitAiConfigAndGetTelemetyrClient();
+
             using (var subscription = DiagnosticsHelper.SubscribeToListener())
             {
                 ServiceHost host = null;
